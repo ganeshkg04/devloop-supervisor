@@ -1,6 +1,6 @@
 {
   "name": "devloop-supervisor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keeps your local dev loop alive: restarts crashed build watches and dev servers, shows live logs on a status page, and exposes build errors to coding agents over MCP.",
   "keywords": [
     "dev-server",

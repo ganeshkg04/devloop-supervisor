@@ -63,3 +63,16 @@ test('tool errors come back as isError results', async () => {
   assert.equal(none.result.isError, true);
   assert.match(none.result.content[0].text, /No devloop-supervisor is running/);
 });
+
+test('get_errors ignores errors from builds that were already fixed', async () => {
+  const units = [{ id: 'types', kind: 'watch', state: 'ready', build: { state: 'ready', startedAt: 100, at: 110 }, restarts: 0 }];
+  const api = {
+    status: async () => ({ name: 'Loop', booting: false, warnings: [], units }),
+    logs: async () => [
+      { t: 50, text: 'error TS2345: old mistake', level: 'error' },
+      { t: 105, text: 'Found 0 errors. Watching for file changes.', level: '' },
+    ],
+  };
+  const res = await handleMessage(call('get_errors'), api);
+  assert.equal(res.result.content[0].text, 'No errors.');
+});

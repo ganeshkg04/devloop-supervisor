@@ -91,7 +91,8 @@ const TOOLS = [
 
 class ToolError extends Error {}
 
-const time = (ms) => (ms ? new Date(ms).toISOString().slice(11, 19) : '');
+// Local time, matching the timestamps the build tools print in their own logs.
+const time = (ms) => (ms ? new Date(ms).toTimeString().slice(0, 8) : '');
 const secs = (ms) => (ms === null || ms === undefined ? '' : `${(ms / 1000).toFixed(1)} s`);
 const clamp = (value, fallback, max) => Math.min(Math.max(Number.isInteger(value) ? value : fallback, 1), max);
 
@@ -137,7 +138,9 @@ async function collectErrors(api, status, id, perProcess) {
   const blocks = [];
   for (const unit of targets) {
     const lines = (await api.logs(unit.id, 3000)) ?? [];
-    const errors = lines.filter((line) => line.level === 'error').slice(-perProcess);
+    // Only errors from the current (or last) build: older ones were already fixed.
+    const since = unit.build?.startedAt ?? 0;
+    const errors = lines.filter((line) => line.level === 'error' && line.t >= since).slice(-perProcess);
     const failing = unit.build?.state === 'error' || unit.state === 'crashloop' || unit.state === 'error';
     if (!errors.length && !failing) continue;
     const head = `## ${unit.id}: ${unit.state}${unit.build?.error ? ` (build error: ${unit.build.error})` : ''}${unit.state === 'crashloop' ? ` (${unit.note})` : ''}`;

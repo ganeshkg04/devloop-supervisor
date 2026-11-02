@@ -218,7 +218,8 @@ function readSignals(unit, { text, level }) {
   if (state === 'building') {
     if (unit.build.state !== 'building') unit.build = freshBuild();
   } else {
-    const ms = unit.build.startedAt ? now - unit.build.startedAt : null;
+    // Only a build that was seen starting has a duration (a server restarting itself in-process does not).
+    const ms = unit.build.state === 'building' && unit.build.startedAt ? now - unit.build.startedAt : null;
     unit.build = { ...unit.build, state, at: now, ms, error: state === 'error' ? unit.build.error || text : '' };
     if (state === 'ready') {
       unit.streak = 0;

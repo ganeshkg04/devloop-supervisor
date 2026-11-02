@@ -154,3 +154,12 @@ test('MCP over stdio talks to the running supervisor', async () => {
   assert.match(text, /lib \(watch\): ready/);
   assert.match(text, /url: http:\/\/localhost:5999\//);
 });
+
+test('a server that restarts itself in-process gets no build duration', async () => {
+  // The fake server announces itself a second time, with no build seen starting.
+  const web = await waitFor(async () => {
+    const u = (await unitsById()).web;
+    return u.build.ms === null ? u : null;
+  }, 'second ready signal', 5000);
+  assert.equal(web.state, 'ready');
+});

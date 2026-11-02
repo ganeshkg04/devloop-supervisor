@@ -6,6 +6,8 @@
 [![downloads](https://img.shields.io/npm/dm/devloop-supervisor)](https://www.npmjs.com/package/devloop-supervisor)
 ![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
 
+![A coding agent breaks a build, reads the type error over MCP, fixes it and confirms the build is green](docs/demo.gif)
+
 Keeps your local dev loop alive. It runs your build watches and dev servers, **restarts whatever crashes**, shows live logs on a **status page**, and gives coding agents (Claude Code, Cursor, …) an **MCP endpoint** to read build errors and restart processes.
 
 Zero dependencies. Node 18.18+. Windows, macOS and Linux.
