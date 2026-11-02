@@ -1,5 +1,11 @@
 # devloop-supervisor
 
+[![npm](https://img.shields.io/npm/v/devloop-supervisor)](https://www.npmjs.com/package/devloop-supervisor)
+[![node](https://img.shields.io/node/v/devloop-supervisor)](https://nodejs.org)
+[![license](https://img.shields.io/npm/l/devloop-supervisor)](LICENSE)
+[![downloads](https://img.shields.io/npm/dm/devloop-supervisor)](https://www.npmjs.com/package/devloop-supervisor)
+![dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
+
 Keeps your local dev loop alive. It runs your build watches and dev servers, **restarts whatever crashes**, shows live logs on a **status page**, and gives coding agents (Claude Code, Cursor, …) an **MCP endpoint** to read build errors and restart processes.
 
 Zero dependencies. Node 18.18+. Windows, macOS and Linux.
@@ -8,6 +14,8 @@ Zero dependencies. Node 18.18+. Windows, macOS and Linux.
 npx devloop-supervisor init      # writes devloop.config.json
 npx devloop-supervisor           # status page on http://localhost:4290
 ```
+
+Or add it to a project: `npm install --save-dev devloop-supervisor`, then run `npx devloop-supervisor` or add `"dev": "devloop-supervisor"` to your scripts.
 
 ---
 
