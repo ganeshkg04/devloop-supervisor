@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dev loop</title>
+<link rel="icon" id="favicon" href="data:,">
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #fff; --border: #e2e5ea; --ink: #141820; --muted: #5c6574;
+    --primary: #2562bf; --on-primary: #fff;
+    --ok: #127a4a; --ok-bg: #e5f4ec; --warn: #935600; --warn-bg: #fcf1d9;
+    --err: #b42323; --err-bg: #fcebeb; --busy: #2562bf; --busy-bg: #e7eefa; --idle: #5c6574; --idle-bg: #eef0f3;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1116; --surface: #171a21; --border: #2a2f39; --ink: #e6e9ef; --muted: #98a1b0;
+      --primary: #6ea0ff; --on-primary: #0f1116;
+      --ok: #4cc38a; --ok-bg: #12291e; --warn: #e5a23a; --warn-bg: #2b2212;
+      --err: #ff7d7d; --err-bg: #2e1517; --busy: #6ea0ff; --busy-bg: #152238; --idle: #98a1b0; --idle-bg: #1f232b;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  .spacer { flex: 1; }
+  a { color: var(--primary); }
+  main { display: flex; flex-direction: column; gap: 16px; max-width: 1400px; margin: 0 auto; padding: 16px 20px; }
+  .banner { padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-size: 13px; }
+  .banner p { margin: 0; }
+  .banner p + p { margin-top: 4px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .card { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card h2 { margin: 0; overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  .pill { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .ok { color: var(--ok); background: var(--ok-bg); }
+  .err { color: var(--err); background: var(--err-bg); }
+  .warn { color: var(--warn); background: var(--warn-bg); }
+  .busy { color: var(--busy); background: var(--busy-bg); }
+  .idle { color: var(--idle); background: var(--idle-bg); }
+  .pill.busy::before { animation: pulse 1s ease-in-out infinite; }
+  .facts { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; color: var(--muted); font-size: 12px; list-style: none; }
+  .note { margin: 0; font-size: 12px; color: var(--muted); }
+  .error-text { margin: 0; padding: 6px 8px; overflow: hidden; border-radius: 6px; background: var(--err-bg); color: var(--err); font: 12px/1.4 var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+  .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; }
+  button { padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  button.primary { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+  button.danger { color: var(--err); }
+  button.quiet { border-color: transparent; color: var(--primary); }
+  button:disabled { opacity: .55; cursor: default; }
+  .logs { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .log-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tab { border-color: transparent; color: var(--muted); }
+  .tab[aria-selected="true"] { background: var(--busy-bg); color: var(--primary); font-weight: 600; }
+  .tab .dot { display: inline-block; width: 7px; height: 7px; margin-inline-start: 6px; border-radius: 50%; background: var(--err); vertical-align: middle; }
+  .log-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-inline-start: auto; font-size: 12px; color: var(--muted); }
+  .log-tools label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .log { height: 55vh; min-height: 240px; padding: 8px 12px; overflow: auto; font: 12px/1.5 var(--mono); }
+  .log:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+  .line { white-space: pre-wrap; word-break: break-word; }
+  .line.error { color: var(--err); }
+  .line.warn { color: var(--warn); }
+  .ts { color: var(--muted); user-select: none; }
+  .empty { color: var(--muted); }
+  footer { max-width: 1400px; margin: 0 auto; padding: 0 20px 20px; color: var(--muted); font-size: 12px; }
+  code { font: 12px var(--mono); }
+  @keyframes pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .pill.busy::before { animation: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Dev loop</h1>
+  <span id="overall" class="pill idle">Connecting…</span>
+  <span class="spacer"></span>
+  <a id="app-link" href="#" target="_blank" rel="noopener" hidden>Open the app ↗</a>
+  <button id="notify" type="button">Notify me on failures</button>
+  <button id="shutdown" type="button" class="danger">Stop everything</button>
+</header>
+<main>
+  <div id="banner" class="banner" hidden></div>
+  <section id="cards" class="cards" aria-label="Processes"></section>
+  <section class="logs" aria-label="Logs">
+    <div class="log-bar">
+      <div id="tabs" class="tabs" role="tablist" aria-label="Log source"></div>
+      <div class="log-tools">
+        <label><input id="errors-only" type="checkbox"> Errors only</label>
+        <label><input id="follow" type="checkbox" checked> Follow</label>
+        <button id="copy-error" type="button">Copy last error</button>
+        <button id="clear" type="button">Clear view</button>
+      </div>
+    </div>
+    <div id="log" class="log" tabindex="0" aria-live="off" aria-label="Log output"></div>
+  </section>
+</main>
+<footer id="footer"></footer>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const units = new Map();
+  const lines = new Map();
+  const pending = new Map();
+  const loaded = new Set();
+  const clearedAt = new Map();
+  const COLORS = { ok: '#16a34a', err: '#dc2626', warn: '#d97706', busy: '#2563eb', idle: '#9ca3af' };
+  const MARKS = { ok: '✓', err: '✗', warn: '!', busy: '⟳', idle: '·' };
+  let selected = null;
+  let warnings = [];
+  let booting = false;
+  let notify = false;
+  let stopped = false;
+  let appName = 'Dev loop';
+
+  try { notify = localStorage.getItem('devloop.notify') === '1' && 'Notification' in window && Notification.permission === 'granted'; } catch { /* storage blocked */ }
+
+  const escape = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const time = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const secs = (ms) => (ms < 60_000 ? `${Math.max(1, Math.round(ms / 1000))} s` : `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s`);
+  const ago = (ms) => (ms < 60_000 ? `${Math.round(ms / 1000)} s` : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min` : `${(ms / 3_600_000).toFixed(1)} h`);
+  const post = (url) => fetch(url, { method: 'POST', headers: { 'X-Devloop': '1' } });
+
+  function label(unit) {
+    if (unit.kind === 'watch') {
+      if (unit.mode === 'once') return 'Building once';
+      return { idle: 'Not watched', starting: 'Building', building: 'Building', ready: 'Up to date', error: 'Build failed', restarting: 'Restarting', crashloop: 'Paused' }[unit.state] ?? unit.state;
+    }
+    if (unit.kind === 'serve') {
+      return { stopped: 'Stopped', starting: 'Starting', building: 'Rebuilding', ready: 'Serving', error: 'Build failed', blocked: 'Port busy', restarting: 'Restarting', crashloop: 'Paused' }[unit.state] ?? unit.state;
+    }
+    return { idle: 'Skipped', building: 'Preparing', ready: 'Done', error: 'Failed' }[unit.state] ?? unit.state;
+  }
+
+  function tone(unit) {
+    if (unit.kind === 'watch' && unit.state === 'idle') return unit.mode === 'once' ? 'busy' : unit.build?.state === 'error' ? 'err' : 'idle';
+    return { ready: 'ok', error: 'err', crashloop: 'err', restarting: 'warn', blocked: 'warn', building: 'busy', starting: 'busy', idle: 'idle', stopped: 'idle' }[unit.state] ?? 'idle';
+  }
+
+  const isActive = (unit) => !(
+    (unit.kind === 'watch' && unit.state === 'idle' && unit.mode !== 'once' && unit.build?.state !== 'error')
+    || (unit.kind === 'serve' && unit.state === 'stopped')
+    || (unit.kind === 'task' && (unit.state === 'idle' || unit.state === 'ready'))
+  );
+
+  function overall() {
+    if (stopped) return ['idle', 'Supervisor stopped'];
+    const active = [...units.values()].filter(isActive).map(tone);
+    if (active.includes('err')) return ['err', 'Needs attention'];
+    if (active.includes('warn')) return ['warn', 'Recovering'];
+    if (booting || active.includes('busy')) return ['busy', 'Building'];
+    return active.length ? ['ok', 'All up to date'] : ['idle', 'Nothing running'];
+  }
+
+  function renderOverall() {
+    const [t, text] = overall();
+    const pill = $('overall');
+    pill.className = `pill ${t}`;
+    pill.textContent = text;
+    document.title = `${MARKS[t]} ${appName}`;
+    $('favicon').href = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="${COLORS[t]}"/></svg>`)}`;
+    const serve = units.get('serve');
+    const link = $('app-link');
+    link.hidden = !serve || serve.state === 'stopped';
+    if (serve) link.href = serve.url || (serve.port ? `http://localhost:${serve.port}/` : '#');
+  }
+
+  function actions(unit) {
+    const button = (action, text, cls = '') => `<button type="button" class="${cls}" data-unit="${escape(unit.id)}" data-action="${action}">${text}</button>`;
+    const restartText = unit.state === 'crashloop' || unit.state === 'restarting' ? 'Restart now' : 'Restart';
+    const list = [];
+    if (unit.kind === 'watch') {
+      if (unit.mode === 'once') list.push('<button type="button" disabled>Building…</button>');
+      else if (unit.state === 'idle') list.push(button('watch', 'Watch', 'primary'), ...(unit.canBuildOnce ? [button('build', 'Build once')] : []));
+      else list.push(button('restart', restartText), button('stop', 'Stop watching'));
+    } else if (unit.kind === 'serve') {
+      if (unit.state === 'stopped') list.push(button('start', 'Start', 'primary'));
+      else list.push(button('restart', restartText), button('stop', 'Stop'));
+    } else if (unit.state === 'error') {
+      list.push(button('start', 'Retry', 'primary'));
+    }
+    list.push(button('logs', 'Logs', 'quiet'));
+    return list.join('');
+  }
+
+  function card(unit) {
+    const build = unit.build || {};
+    const facts = [];
+    if (build.state === 'building' && build.startedAt) facts.push(`Building for ${ago(Date.now() - build.startedAt)}`);
+    else if (build.at) facts.push(`${build.state === 'error' ? 'Failed' : 'Built'} at ${time(build.at)}${build.ms ? ` in ${secs(build.ms)}` : ''}`);
+    if (unit.pid && unit.startedAt) facts.push(`PID ${unit.pid} · up ${ago(Date.now() - unit.startedAt)}`);
+    if (unit.restarts) facts.push(`Restarted ${unit.restarts}×`);
+    if (unit.lastExit && unit.restarts) facts.push(`Last exit at ${time(unit.lastExit.at)}: ${unit.lastExit.reason}`);
+    let note = unit.note;
+    if (unit.state === 'restarting' && unit.restartAt) note = `Restarting in ${Math.max(0, Math.ceil((unit.restartAt - Date.now()) / 1000))} s. ${unit.note}`;
+    if (unit.kind === 'serve' && unit.state === 'ready' && unit.url) note = `Serving ${unit.url}`;
+    const error = build.state === 'error' && build.error ? build.error : '';
+    return `<article class="card" aria-label="${escape(unit.label)}">
+      <div class="card-head"><h2 title="${escape(unit.label)}">${escape(unit.label)}</h2><span class="pill ${tone(unit)}">${escape(label(unit))}</span></div>
+      ${facts.length ? `<ul class="facts">${facts.map((fact) => `<li>${escape(fact)}</li>`).join('')}</ul>` : ''}
+      ${note ? `<p class="note">${escape(note)}</p>` : ''}
+      ${error ? `<p class="error-text" title="${escape(error)}">${escape(error)}</p>` : ''}
+      <div class="actions">${actions(unit)}</div>
+    </article>`;
+  }
+
+  function renderCards() {
+    const cards = $('cards');
+    if (cards.contains(document.activeElement) && document.activeElement !== cards) return;
+    const shown = [...units.values()].filter((unit) => unit.kind !== 'task' || isActive(unit));
+    cards.innerHTML = shown.map(card).join('');
+  }
+
+  function renderBanner() {
+    const banner = $('banner');
+    banner.hidden = !warnings.length;
+    banner.innerHTML = warnings.length
+      ? `<p><strong>A conflicting process is running.</strong> It may fight these over the same output; stop it:</p>${warnings.map((w) => `<p><code>${escape(w)}</code></p>`).join('')}`
+      : '';
+  }
+
+  function renderTabs() {
+    const tabs = $('tabs');
+    tabs.innerHTML = [...units.values()].map((unit) => {
+      const flagged = tone(unit) === 'err';
+      return `<button type="button" class="tab" role="tab" data-tab="${escape(unit.id)}" aria-controls="log" aria-selected="${unit.id === selected}">${escape(unit.label)}${flagged ? '<span class="dot" aria-label="has errors"></span>' : ''}</button>`;
+    }).join('');
+  }
+
+  const visible = (id) => {
+    const since = clearedAt.get(id) ?? 0;
+    const errorsOnly = $('errors-only').checked;
+    return (lines.get(id) ?? []).filter((line) => line.t > since && (!errorsOnly || line.level === 'error'));
+  };
+
+  function lineElement(line) {
+    const element = document.createElement('div');
+    element.className = `line ${line.level}`;
+    const stamp = document.createElement('span');
+    stamp.className = 'ts';
+    stamp.textContent = `${time(line.t)}  `;
+    element.append(stamp, document.createTextNode(line.text));
+    return element;
+  }
+
+  function renderLog() {
+    const log = $('log');
+    const list = visible(selected).slice(-2000);
+    if (!list.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = loaded.has(selected) ? 'No output yet.' : 'Loading…';
+      log.replaceChildren(empty);
+      return;
+    }
+    const fragment = document.createDocumentFragment();
+    list.forEach((line) => fragment.append(lineElement(line)));
+    log.replaceChildren(fragment);
+    if ($('follow').checked) log.scrollTop = log.scrollHeight;
+  }
+
+  function selectLog(id) {
+    if (!units.has(id)) return;
+    selected = id;
+    renderTabs();
+    renderLog();
+    if (loaded.has(id)) return;
+    fetch(`/api/logs?unit=${encodeURIComponent(id)}&lines=3000`).then((res) => res.json()).then(({ lines: history }) => {
+      const lastT = history.length ? history[history.length - 1].t : 0;
+      lines.set(id, [...history, ...(pending.get(id) ?? []).filter((line) => line.t > lastT)]);
+      pending.delete(id);
+      loaded.add(id);
+      if (selected === id) renderLog();
+    }).catch(() => {});
+  }
+
+  function addLine(line) {
+    if (!loaded.has(line.id)) {
+      const queue = pending.get(line.id) ?? [];
+      queue.push(line);
+      pending.set(line.id, queue.slice(-3000));
+      return;
+    }
+    const list = lines.get(line.id) ?? [];
+    list.push(line);
+    if (list.length > 3000) list.splice(0, list.length - 3000);
+    lines.set(line.id, list);
+    if (line.id !== selected || line.t <= (clearedAt.get(line.id) ?? 0)) return;
+    if ($('errors-only').checked && line.level !== 'error') return;
+    const log = $('log');
+    if (log.firstChild?.classList?.contains('empty')) log.replaceChildren();
+    log.append(lineElement(line));
+    while (log.childElementCount > 2000) log.firstChild.remove();
+    if ($('follow').checked) log.scrollTop = log.scrollHeight;
+  }
+
+  function maybeNotify(before, unit) {
+    if (!notify || !before) return;
+    const was = tone(before);
+    const now = tone(unit);
+    if (now === 'err' && was !== 'err') new Notification(`${unit.label}: ${label(unit)}`, { body: unit.build?.error || unit.note || '', tag: unit.id });
+    else if (was === 'err' && now === 'ok') new Notification(`${unit.label} is back: ${label(unit)}`, { tag: unit.id });
+  }
+
+  function applySnapshot(snapshot) {
+    warnings = snapshot.warnings ?? [];
+    booting = snapshot.booting;
+    appName = snapshot.name || appName;
+    $('title').textContent = appName;
+    $('footer').innerHTML = `Full logs: <code>${escape(snapshot.logDir)}</code> · Stop from a shell: <code>npx devloop-supervisor --stop</code> · Agents (MCP): <code>http://127.0.0.1:${escape(snapshot.port)}/mcp</code>`;
+    snapshot.units.forEach((unit) => units.set(unit.id, unit));
+    if (!selected || !units.has(selected)) {
+      const all = [...units.values()];
+      const first = all.find((unit) => unit.kind === 'watch' && unit.state !== 'idle') ?? all.find((unit) => unit.kind === 'serve') ?? all[0];
+      if (first) selectLog(first.id);
+    }
+    renderBanner();
+    renderCards();
+    renderTabs();
+    renderOverall();
+  }
+
+  function connect() {
+    const events = new EventSource('/events');
+    events.addEventListener('snapshot', (event) => applySnapshot(JSON.parse(event.data)));
+    events.addEventListener('unit', (event) => {
+      const unit = JSON.parse(event.data);
+      const before = units.get(unit.id);
+      units.set(unit.id, unit);
+      maybeNotify(before, unit);
+      renderCards();
+      renderTabs();
+      renderOverall();
+    });
+    events.addEventListener('line', (event) => addLine(JSON.parse(event.data)));
+    events.addEventListener('booting', (event) => {
+      booting = JSON.parse(event.data).booting;
+      renderOverall();
+    });
+    events.addEventListener('bye', () => {
+      stopped = true;
+      events.close();
+      renderOverall();
+      document.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+    });
+    events.onerror = () => {
+      if (stopped) return;
+      const pill = $('overall');
+      pill.className = 'pill err';
+      pill.textContent = 'Disconnected, retrying…';
+    };
+  }
+
+  $('cards').addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const { unit, action } = button.dataset;
+    if (action === 'logs') {
+      selectLog(unit);
+      $('log').focus();
+      return;
+    }
+    button.disabled = true;
+    post(`/api/units/${encodeURIComponent(unit)}/${action}`).finally(() => { button.disabled = false; });
+  });
+  $('tabs').addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-tab]');
+    if (tab) selectLog(tab.dataset.tab);
+  });
+  $('errors-only').addEventListener('change', renderLog);
+  $('clear').addEventListener('click', () => {
+    clearedAt.set(selected, Date.now());
+    renderLog();
+  });
+  $('copy-error').addEventListener('click', async () => {
+    const last = [...(lines.get(selected) ?? [])].reverse().find((line) => line.level === 'error');
+    const button = $('copy-error');
+    if (!last) {
+      button.textContent = 'No error to copy';
+    } else {
+      try {
+        await navigator.clipboard.writeText(last.text);
+        button.textContent = 'Copied';
+      } catch {
+        button.textContent = 'Copy blocked';
+      }
+    }
+    setTimeout(() => { button.textContent = 'Copy last error'; }, 1500);
+  });
+  $('notify').addEventListener('click', async () => {
+    if (!('Notification' in window)) return;
+    notify = !notify && (await Notification.requestPermission()) === 'granted';
+    try { localStorage.setItem('devloop.notify', notify ? '1' : '0'); } catch { /* storage blocked */ }
+    $('notify').textContent = notify ? 'Notifications on' : 'Notify me on failures';
+  });
+  $('notify').textContent = notify ? 'Notifications on' : 'Notify me on failures';
+  $('shutdown').addEventListener('click', () => {
+    if (confirm('Stop every process this supervisor started?')) post('/api/shutdown');
+  });
+
+  setInterval(() => {
+    if ([...units.values()].some((unit) => unit.pid || unit.state === 'restarting' || unit.build?.state === 'building')) renderCards();
+  }, 1000);
+  connect();
+})();
+</script>
+</body>
+</html>

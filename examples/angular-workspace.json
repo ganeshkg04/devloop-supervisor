@@ -1,0 +1,38 @@
+{
+  "name": "Angular workspace",
+  "port": 4290,
+  "heapMb": 8192,
+  "prepare": "npm ci",
+  "conflictPattern": "ng(\\.js)?\\b.*\\bbuild\\b.*--watch",
+  "processes": [
+    {
+      "id": "shared-ui",
+      "kind": "watch",
+      "cwd": "libs-workspace",
+      "command": "npx ng build shared-ui --watch --configuration development",
+      "buildOnce": "npx ng build shared-ui --configuration development",
+      "preset": "angular-library",
+      "sources": "libs-workspace/projects/shared-ui",
+      "output": "libs-workspace/dist/shared-ui",
+      "autostart": false
+    },
+    {
+      "id": "feature-lib",
+      "kind": "watch",
+      "cwd": "libs-workspace",
+      "command": "npx ng build feature-lib --watch --configuration development",
+      "buildOnce": "npx ng build feature-lib --configuration development",
+      "preset": "angular-library",
+      "sources": "libs-workspace/projects/feature-lib",
+      "output": "libs-workspace/dist/feature-lib"
+    },
+    {
+      "id": "app",
+      "kind": "serve",
+      "cwd": "app",
+      "command": "npm start",
+      "preset": "angular-app",
+      "port": 4200
+    }
+  ]
+}

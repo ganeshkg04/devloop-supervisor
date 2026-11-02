@@ -1,0 +1,43 @@
+{
+  "name": "devloop-supervisor",
+  "version": "0.1.0",
+  "description": "Keeps your local dev loop alive: restarts crashed build watches and dev servers, shows live logs on a status page, and exposes build errors to coding agents over MCP.",
+  "keywords": [
+    "dev-server",
+    "watch",
+    "supervisor",
+    "process-manager",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "angular",
+    "vite",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Ganesh Krishnan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ganeshkg04/devloop-supervisor.git"
+  },
+  "homepage": "https://github.com/ganeshkg04/devloop-supervisor#readme",
+  "bugs": {
+    "url": "https://github.com/ganeshkg04/devloop-supervisor/issues"
+  },
+  "bin": {
+    "devloop-supervisor": "bin/devloop-supervisor.js"
+  },
+  "main": "src/supervisor.js",
+  "files": [
+    "bin/",
+    "src/",
+    "devloop.config.example.json",
+    "examples/"
+  ],
+  "engines": {
+    "node": ">=18.18"
+  },
+  "scripts": {
+    "test": "node --test test/config.test.js test/mcp.test.js test/supervisor.test.js"
+  }
+}

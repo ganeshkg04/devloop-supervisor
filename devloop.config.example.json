@@ -1,0 +1,25 @@
+{
+  "name": "My dev loop",
+  "port": 4290,
+  "logDir": ".devloop/logs",
+  "prepare": "npm install",
+  "processes": [
+    {
+      "id": "types",
+      "kind": "watch",
+      "command": "npx tsc --watch --preserveWatchOutput -p packages/shared",
+      "preset": "tsc-watch",
+      "sources": "packages/shared/src",
+      "output": "packages/shared/dist",
+      "buildOnce": "npx tsc -p packages/shared"
+    },
+    {
+      "id": "web",
+      "kind": "serve",
+      "command": "npm run dev",
+      "cwd": "apps/web",
+      "preset": "vite",
+      "port": 5173
+    }
+  ]
+}

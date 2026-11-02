@@ -1,0 +1,30 @@
+{
+  "name": "API + web",
+  "port": 4290,
+  "processes": [
+    {
+      "id": "api-types",
+      "kind": "watch",
+      "cwd": "api",
+      "command": "npx tsc --watch --preserveWatchOutput",
+      "preset": "tsc-watch"
+    },
+    {
+      "id": "api",
+      "kind": "serve",
+      "cwd": "api",
+      "command": "node --watch dist/server.js",
+      "port": 3000,
+      "signals": { "ready": ["listening on"] },
+      "watchPaths": ["api/dist"]
+    },
+    {
+      "id": "web",
+      "kind": "serve",
+      "cwd": "web",
+      "command": "npm run dev",
+      "preset": "vite",
+      "port": 5173
+    }
+  ]
+}
